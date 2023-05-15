@@ -10,6 +10,9 @@
 
 //unsigned int microseconds;
 
+int team1AddedBias = 0;
+int team2AddedBias = 0;
+
 using namespace std;
 
 class team {
@@ -17,6 +20,7 @@ public:
     double oRating;
     double dRating;
     string name;
+    unsigned int designation = 1;
 
     bool equals(team other){
         return other.name == name; //s this how you compare strings
@@ -86,12 +90,17 @@ private:
         if (r != max){
             int addR = max+123;
             double b;
-            while (addR+r > max){
+            while (addR+r >= max){
                 b = bias.oRating/5.0;
                 addR = randomInt(0,max*b);
 
             }
             //cout << b << " addR:" << addR << " " << bias.name<< endl;
+
+            if (bias.designation == 1){
+                team1AddedBias+=addR;
+            } else {team2AddedBias+=addR;}
+
             r+addR;
         }
 
@@ -162,7 +171,7 @@ private:
 
             if (ra > 50){ //successful
                 adjustScore(scorer, 2);
-
+                put(offense.name+" 2-PT try SUCCESS");
             } else if (ra == 1){ //fumble/interception
                  int returnDistance = randomInt(0,110, defense);
                 fieldPosition = getOppositeFieldPosition();
@@ -206,7 +215,7 @@ private:
         team kickingTeam = offense;
 
         if (half == 2 && getTeamScore(kickingTeam)< getTeamScore(defense) && time<=20){ //onside kick
-            int kickProb = randomInt(1,10, offense);
+            int kickProb = randomInt(1,10); //decided no bias
             fieldPosition = 50;
             if (kickProb == 10){
                 put("ONSIDE KICK GOOD, recovered by "+kickingTeam.name);
@@ -225,12 +234,11 @@ private:
             fieldPosition = getOppositeFieldPosition(); //happens right after catch
             if (fieldPosition < 0) { //TOUCHBACK
                 put(kickingTeam.name + " kick off for " + to_string(kickDistance) + " TOUCHBACK");
-
                 fieldPosition = 25;
                 resetDowns();
                 return;
             }
-            int returnDistance = randomInt(1, 40, offense);
+            int returnDistance = randomInt(1, 40, offense); //possession swapped...
             fieldPosition += returnDistance;
             resetDowns();
             put(kickingTeam.name + " kick off for " + to_string(kickDistance) + ", " + offense.name + " RETURNS for " +
@@ -243,12 +251,27 @@ private:
         //put(offense.name+" Punt.");
 
         //fieldPosition > 100-38 fake punt stuff?
+        int fakePuntProb = randomInt(1,500);
+        if (fakePuntProb==329){
+            int fakeDistance = randomInt(-50,60);
+            if (fakeDistance<=0){
+                fakeDistance=1;
+            }
 
+            int gain = (targetPosition-fieldPosition)+ fakeDistance;
+            fieldPosition+= gain;
+            put("FAKE PUNT for "+to_string(gain));
+            resetDowns();
+            if (fieldPosition>=100){
+                touchdown(offense);
+            }
+            return;
+        }
 
         team puntingTeam = offense;
-        int puntDistance = randomInt(25,50, offense);
+        int puntDistance = randomInt(25,75, offense);
         fieldPosition += puntDistance;
-        swapPossession();
+        swapPossession(); //OFFENSE IS NOW catching
         fieldPosition = getOppositeFieldPosition();
         if (fieldPosition < 0){ //TOUCHBACK
             put(puntingTeam.name+" PUNTS for "+to_string(puntDistance)+" TOUCHBACK");
@@ -257,11 +280,11 @@ private:
             return;
         }
 
-        if (randomInt(0,100) <= 7){  //6.25%
+        if (randomInt(0,100, offense) <= 6){  //6.25%, new offense
             //punt is muffed
             if (randomInt(0,2) >= 1){
-                put("PUNT MUFFED but RECOVERED");
-                int returnDistance = (-10,15);
+                put(puntingTeam.name+" PUNT for "+to_string(puntDistance)+" MUFFED but RECOVERED");
+                int returnDistance = randomInt(-10,15, offense);
                 fieldPosition+=returnDistance;
                 if (fieldPosition<0){
                     safety();
@@ -270,12 +293,13 @@ private:
                 resetDowns();
                 return;
             }
-            put("PUNT MUFFED and RECOVERED by kicking team! ");
+            //else: muffed and recovered by kicking team
+            put(puntingTeam.name+" PUNT for "+to_string(puntDistance)+" MUFFED and RECOVERED by kicking team! ");
             //chance for touchdown/return by recovering team
             fieldPosition = getOppositeFieldPosition();
-            swapPossession();
+            swapPossession(); //kicking team is now offense
 
-            int returnDistance = randomInt(0,25);
+            int returnDistance = randomInt(0,25, offense); //new offense (switch??)
             fieldPosition+=returnDistance;
             if (fieldPosition>=100){
                 touchdown(offense);
@@ -286,14 +310,15 @@ private:
         }
 
         //returned
-        int returnDistance = randomInt(-5, 50);
+        int returnDistance = randomInt(-8, 20, offense)+pow(50, (double) randomInt(0,100, offense)/105.0 );
         fieldPosition+=returnDistance;
         put(puntingTeam.name+" PUNT for "+to_string(puntDistance)+", returns for "+to_string(returnDistance)+" yards");
         if (fieldPosition>=100){
+            put("PUNT RETURN TOUCHDOWN");
             touchdown(offense);
         }
 
-        resetDowns();
+        //resetDowns(); //Redundant??
         return;
     }
 
@@ -333,19 +358,21 @@ private:
             }
         }
         if (half == 2 && time<=4 && getTeamScore(offense) < getTeamScore(defense)){ //hail mary
-            int hailMaryChance = randomInt(1,12);
+            int hailMaryChance = randomInt(1,12, offense);
             int tdHailMaryChance = randomInt(1,2);
-            put("HAIL MARY attempt.");
+
             if (hailMaryChance == 12 ){
-                if (tdHailMaryChance == 1){
+                if (tdHailMaryChance == 2){
+                    put("HAIL MARY touchdown");
                     touchdown(offense);
                     time -= 3;
                 }else{
-                    put("Incomplete pass.");
+                    put("Incomplete HAIL MARY pass.");
                     time -= 2;
                     adjustFieldPosition(0);
                 }
             } else {
+                put("Incomplete HAIL MARY pass.");
                 time -= 2;
                 adjustFieldPosition(0);
             }
@@ -360,7 +387,7 @@ private:
 
             }else if (playTypeChance<=4 || fieldPosition>=98) { //running play
                 int fumbleChance = randomInt(1, 100, offense); //<=2 for fumble
-                int rand = randomInt(-3, 10); //field gain
+                int rand = randomInt(-3, 10, defense); //field gain
                 int divider = 1;
                 if (fumbleChance <= 2) {
                     int recoveryChance = randomInt(0, 2);
@@ -432,15 +459,15 @@ private:
 
 int main() {
     team bills;
-    bills.oRating = -5;
-    bills.dRating = -5;
+    bills.oRating = 1.33;
+    bills.dRating = 1;
     bills.name = "raiders";
 
     team eagles;
-    eagles.oRating = 4.6;
-    eagles.dRating = 4.1;
+    eagles.oRating = 5;
+    eagles.dRating = 5;
     eagles.name = "chargers";
-
+    eagles.designation = 2;
 
 
 
@@ -454,7 +481,11 @@ int main() {
     int team1Wins = 0;
     int team2Wins = 0;
 
+    int ties = 0;
+
     for (int ga = 0; ga < 100; ga++) {
+        cout << "--> Game " << ga << endl;
+
         time_t seconds;
         seconds = time(NULL);
         srand(seconds);
@@ -478,9 +509,13 @@ int main() {
         team1Points+= game.score[0];
         team2Points += game.score[1];
 
-        if (game.score[0] > game.score[1]){
-            team1Wins++;
-        } else {team2Wins++;}
+        if (game.score[0] != game.score[1]) {
+            if (game.score[0] > game.score[1]) {
+                team1Wins++;
+            } else { team2Wins++; }
+        } else {
+            ties++;
+        }
 
         if (game.score[0] > team1Highest){
             team1Highest = game.score[0];
@@ -491,11 +526,14 @@ int main() {
 
     cout << game.teams[0].name + ": " + to_string(game.score[0]) + ",  " + game.teams[1].name + ": " +
             to_string(game.score[1]) << endl;
+
     }
 
-    cout << endl << "Overall Stats:" << endl;
-    cout << bills.name << " pts: "<< team1Points << ", wins: "<< team1Wins << ", high pts:" << team1Highest << endl;
-    cout << eagles.name << " pts: "<< team2Points << ", wins: "<< team2Wins << ", high pts:" << team2Highest;
+    cout << endl << "~~~~~Overall Stats~~~~~" << endl;
+    cout << bills.name << " pts: "<< team1Points << ", wins: "<< team1Wins << ", high pts:" << team1Highest << ", tot. bias: "<< team1AddedBias << endl;
+    cout << eagles.name << " pts: "<< team2Points << ", wins: "<< team2Wins << ", high pts:" << team2Highest << ", tot. bias: " << team2AddedBias << endl;
+    cout << "ties: " << ties << endl;
+    cout << "~~~~~~~~~~~~~~~~~~~";
 
     return 0;
 }
