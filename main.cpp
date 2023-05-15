@@ -40,6 +40,12 @@ public:
     int half = 1;
     double time = 100 ; //100 - 0
 
+    bool output = true;
+
+    void addToStat(team t, int stat){
+
+    }
+
     int * doHalf(){
 
         offense = teams[0];
@@ -50,7 +56,7 @@ public:
            offense = defense;
            defense = tempOf;
         }
-        cout << "Coin flip result is that "+ defense.name+" returns the kickoff.\n";
+        put("Coin flip result is that "+ defense.name+" returns the kickoff.");
         kickoff();
         while (time > 0){
             usleep(1000000*waitMultiplier); //1 second
@@ -65,8 +71,11 @@ public:
     }
 
     void put(string msg){
-        cout << msg << " " << down<<"&"<<targetPosition-fieldPosition<< " @" << fieldPosition<< " "<<score[0]<<'-'<<score[1]<<" t:"<<time<<" h:"<<half<<endl;
-        //cout << targetPosition << " " << fieldPosition << endl;
+        if (output==true) { // resource intensive line of code
+            cout << msg << " " << down << "&" << targetPosition - fieldPosition << " @" << fieldPosition << " "
+                 << score[0] << '-' << score[1] << " t:" << time << " h:" << half << endl;
+            //cout << targetPosition << " " << fieldPosition << endl;
+        }
     }
 private:
 
@@ -86,8 +95,19 @@ private:
             rating = bias.dRating;
         }
 
+
+
         int r  = min + (rand() % static_cast<int>(max - min + 1));
-        if (r != max){
+
+        int maxBias = (int) ((max-r)*(rating/5.0));
+        int addR = randomInt(0,maxBias);
+        r+=addR;
+
+        if (bias.designation == 1){
+            team1AddedBias+=addR;
+        } else {team2AddedBias+=addR;}
+
+        if (false){ /////////////old CODE!
             int addR = max+123;
             double b;
             while (addR+r >= max){
@@ -97,9 +117,7 @@ private:
             }
             //cout << b << " addR:" << addR << " " << bias.name<< endl;
 
-            if (bias.designation == 1){
-                team1AddedBias+=addR;
-            } else {team2AddedBias+=addR;}
+
 
             r+addR;
         }
@@ -166,7 +184,7 @@ private:
 
         int teamsScoreDifference = getTeamScore(getOtherTeam(scorer))-getTeamScore(scorer);
         int leadScoreDifference = getTeamScore(scorer)- getTeamScore(getOtherTeam(scorer));
-        if (teamsScoreDifference == 2 || teamsScoreDifference == 8 || leadScoreDifference == 1 ){ //if score difference is 2 or 8
+        if (teamsScoreDifference == 2 || teamsScoreDifference == 9 || leadScoreDifference == 1 ){ //if score difference is 2 or 8
             //also if score difference is 1
 
             if (ra > 50){ //successful
@@ -176,19 +194,19 @@ private:
                  int returnDistance = randomInt(0,110, defense);
                 fieldPosition = getOppositeFieldPosition();
                 fieldPosition += returnDistance;
-                if (fieldPosition>100){
-                put("2-PT TURNOVER, recovered by DEFENSE for "+ to_string(returnDistance)+" yards for 2 POINTS");
-                adjustScore(getOtherTeam(scorer), 2);
-            } else{
-                put("2-PT TURNOVER, recovered by DEFENSE for "+ to_string(returnDistance)+" yards no score");
-            }
+                if (fieldPosition>=100){
+                    put("2-PT TURNOVER, recovered by DEFENSE for "+ to_string(returnDistance)+" yards for 2 POINTS");
+                    adjustScore(getOtherTeam(scorer), 2);
+                } else{
+                    put("2-PT TURNOVER, recovered by DEFENSE for "+ to_string(returnDistance)+" yards no score");
+                 }
             }
 
         } else if (ra == 1) { //return
             int returnDistance = randomInt(0,110, defense);
             fieldPosition = getOppositeFieldPosition();
             fieldPosition += returnDistance;
-            if (fieldPosition>100){
+            if (fieldPosition>=100){
                 put("PAT MUFFED and RECOVERED by DEFENSE for "+ to_string(returnDistance)+" yards for 2 POINTS");
                 adjustScore(getOtherTeam(scorer), 2);
             } else{
@@ -201,7 +219,6 @@ private:
             put("PAT is GOOD "+scorer.name);
         }
 
-        //kickoff:
         kickoff();
     }
 
@@ -458,14 +475,18 @@ private:
 };
 
 int main() {
+    //why does a lower rating result in better stats
+
+    //ratings within 1 point of each other: relatively close stats (higher better)
+
     team bills;
-    bills.oRating = 1.33;
-    bills.dRating = 1;
-    bills.name = "raiders";
+    bills.oRating = 3.6;
+    bills.dRating = 3.32;
+    bills.name = "broncos";
 
     team eagles;
-    eagles.oRating = 5;
-    eagles.dRating = 5;
+    eagles.oRating = 4.91;
+    eagles.dRating = 4.99;
     eagles.name = "chargers";
     eagles.designation = 2;
 
@@ -483,27 +504,33 @@ int main() {
 
     int ties = 0;
 
-    for (int ga = 0; ga < 100; ga++) {
+    time_t startSeconds;
+    startSeconds = time(NULL);
+
+    int gamesToSimulate = 100;
+
+    for (int ga = 0; ga < gamesToSimulate; ga++) {
         cout << "--> Game " << ga << endl;
 
         time_t seconds;
         seconds = time(NULL);
         srand(seconds);
 
-        fb game;
+        fb game; //GAME SETTINGS AND CONSTRUCTION:
         game.teams[0] = bills;
         game.teams[1] = eagles;
-        game.waitMultiplier = 0;
+        game.waitMultiplier = 0; //When output is false and wait is 0, problems occur
+        game.output = true;
 
         for (int i = 1; i <= 2; i++) {
             game.time = 175;
             game.half = i;
             game.doHalf();
-            cout << "End of half " + to_string(i) + ".\n";
+            game.put("End of half " + to_string(i) + ".");
 
         }
         if (game.score[0] == game.score[1]) {
-            cout << "Overtime! \n";
+            game.put("Tie, end of regulation.");
         }
 
         team1Points+= game.score[0];
@@ -525,15 +552,18 @@ int main() {
         }
 
     cout << game.teams[0].name + ": " + to_string(game.score[0]) + ",  " + game.teams[1].name + ": " +
-            to_string(game.score[1]) << endl;
-
+            to_string(game.score[1]) << team1Wins<<"-"<<team2Wins << endl;
     }
 
+    time_t endSeconds;
+    endSeconds = time(NULL);
+
     cout << endl << "~~~~~Overall Stats~~~~~" << endl;
-    cout << bills.name << " pts: "<< team1Points << ", wins: "<< team1Wins << ", high pts:" << team1Highest << ", tot. bias: "<< team1AddedBias << endl;
-    cout << eagles.name << " pts: "<< team2Points << ", wins: "<< team2Wins << ", high pts:" << team2Highest << ", tot. bias: " << team2AddedBias << endl;
+    cout << "Took " << endSeconds-startSeconds << " seconds to simulate "<< gamesToSimulate << " games." << endl;
+    cout << bills.name << " pts: "<< team1Points << ", wins: "<< team1Wins << ", high pts:" << team1Highest << ", total bias: "<< team1AddedBias << endl;
+    cout << eagles.name << " pts: "<< team2Points << ", wins: "<< team2Wins << ", high pts:" << team2Highest << ", total bias: " << team2AddedBias << endl;
     cout << "ties: " << ties << endl;
-    cout << "~~~~~~~~~~~~~~~~~~~";
+    cout << "~~~~~~~~~~~~~~~~~~~~~~";
 
     return 0;
 }
