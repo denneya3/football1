@@ -475,23 +475,19 @@ private:
 };
 
 int main() {
-    //why does a lower rating result in better stats
-
-    //ratings within 1 point of each other: relatively close stats (higher better)
+    //why does a lower rating result in better stats sometimes?
 
     team bills;
-    bills.oRating = 3.6;
-    bills.dRating = 3.32;
-    bills.name = "broncos";
+    bills.oRating = 1;
+    bills.dRating = 1;
+    bills.name = "Chiefs";
+    //bills designation is default team 1
 
     team eagles;
-    eagles.oRating = 4.91;
-    eagles.dRating = 4.99;
-    eagles.name = "chargers";
+    eagles.oRating = 5;
+    eagles.dRating = 5;
+    eagles.name = "Chargers";
     eagles.designation = 2;
-
-
-
 
     int team1Points = 0;
     int team2Points = 0;
@@ -507,7 +503,7 @@ int main() {
     time_t startSeconds;
     startSeconds = time(NULL);
 
-    int gamesToSimulate = 100;
+    int gamesToSimulate = 20;
 
     for (int ga = 0; ga < gamesToSimulate; ga++) {
         cout << "--> Game " << ga << endl;
@@ -523,7 +519,7 @@ int main() {
         game.output = true;
 
         for (int i = 1; i <= 2; i++) {
-            game.time = 175;
+            game.time = 175; //time per half
             game.half = i;
             game.doHalf();
             game.put("End of half " + to_string(i) + ".");
