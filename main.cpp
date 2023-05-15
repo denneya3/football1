@@ -288,8 +288,9 @@ private:
         team puntingTeam = offense;
         int puntDistance = randomInt(25,75, offense);
         fieldPosition += puntDistance;
-        swapPossession(); //OFFENSE IS NOW catching
         fieldPosition = getOppositeFieldPosition();
+        swapPossession(); //OFFENSE IS NOW catching
+
         if (fieldPosition < 0){ //TOUCHBACK
             put(puntingTeam.name+" PUNTS for "+to_string(puntDistance)+" TOUCHBACK");
             fieldPosition = 25;
@@ -362,7 +363,78 @@ private:
         }
     }
 
+    int offensivePenalties[1] = {10};
+    int defensivePenalties[1] = {5};
+
+    bool downs[1] = {false};
+    string messages[1] = {"Holding"};
+
+    void penalize(bool side, int penalty){
+        // side = true, offense
+        // side = false, defense
+        int amount = 0;
+        double penaltyFactor = 1;
+        if (side == true){ // OFFENSIVE PENALTY
+            amount = offensivePenalties[penalty];
+
+            if (fieldPosition<=20){
+                penaltyFactor = 0.5;
+            }
+
+            if (fieldPosition-amount <= 0){
+                amount = fieldPosition/2;
+            }
+
+            if (downs[penalty]==true && down != 4){
+                down++;
+            }
+
+
+            fieldPosition-=amount;
+
+        } else if (side == false){ //DEFENSIVE PENALTY
+            amount = defensivePenalties[penalty];
+
+            if (fieldPosition>=80){
+                penaltyFactor = 0.5;
+            }
+
+            if (fieldPosition+amount >= 100){
+                amount = (100-fieldPosition)/2;
+            }
+
+            fieldPosition+=amount;
+            if (fieldPosition>= targetPosition){
+                down = 1;
+            }
+
+        }
+
+        string po = "Offense";
+        if (side == false){
+            po = "Defense";
+        }
+        put("FLAG "+po+" "+messages[penalty]+", "+to_string(amount)+" yds.");
+
+    }
+
     void play(){
+        //penalty flags
+        // team homeTeam = teams[0]; //dont worry about this right now
+        int flagProbability = randomInt(1,100);
+        if (flagProbability<=4){
+            team offendingTeam = defense;
+            if (flagProbability <= 2){
+                offendingTeam = offense;
+                penalize(true, 0);
+
+                return;
+            }
+
+            penalize(false, 0);
+
+            return;
+        }
 
        if (fieldPosition>= targetPosition){ //suppoed to be happengin in adjustFieldPosition
            resetDowns();
@@ -478,14 +550,14 @@ int main() {
     //why does a lower rating result in better stats sometimes?
 
     team bills;
-    bills.oRating = 1;
-    bills.dRating = 1;
+    bills.oRating = 5;
+    bills.dRating = 3.7;
     bills.name = "Chiefs";
     //bills designation is default team 1
 
     team eagles;
-    eagles.oRating = 5;
-    eagles.dRating = 5;
+    eagles.oRating = 4;
+    eagles.dRating = 3;
     eagles.name = "Chargers";
     eagles.designation = 2;
 
@@ -503,9 +575,9 @@ int main() {
     time_t startSeconds;
     startSeconds = time(NULL);
 
-    int gamesToSimulate = 20;
+    int gamesToSimulate = 100;
 
-    for (int ga = 0; ga < gamesToSimulate; ga++) {
+    for (int ga = 1; ga <= gamesToSimulate; ga++) {
         cout << "--> Game " << ga << endl;
 
         time_t seconds;
@@ -515,7 +587,7 @@ int main() {
         fb game; //GAME SETTINGS AND CONSTRUCTION:
         game.teams[0] = bills;
         game.teams[1] = eagles;
-        game.waitMultiplier = 0; //When output is false and wait is 0, problems occur
+        game.waitMultiplier = 1; //When output is false and wait is 0, problems occur
         game.output = true;
 
         for (int i = 1; i <= 2; i++) {
@@ -548,7 +620,7 @@ int main() {
         }
 
     cout << game.teams[0].name + ": " + to_string(game.score[0]) + ",  " + game.teams[1].name + ": " +
-            to_string(game.score[1]) << team1Wins<<"-"<<team2Wins << endl;
+            to_string(game.score[1]) <<" "<< team1Wins<<"-"<<team2Wins << endl;
     }
 
     time_t endSeconds;
