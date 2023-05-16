@@ -46,7 +46,10 @@ public:
 
     }
 
-    int * doHalf(){
+    bool isOvertime = false;
+
+    int * doHalf(bool overtimeRules){
+        isOvertime = overtimeRules;
 
         offense = teams[0];
         defense = teams[1];
@@ -62,6 +65,10 @@ public:
             usleep(1000000*waitMultiplier); //1 second
 
             put(offense.name+" pos.");
+
+            //for overtime: it is play out until end (for equal opportunity)
+
+            //if (overtimeRules && abs(score[0]-score[1])>=6)
 
             play();
         }
@@ -101,7 +108,6 @@ private:
 
         int maxBias = (int) ((max-r)*(rating/5.0));
         int addR = randomInt(0,maxBias);
-        r+=addR;
 
         if (bias.designation == 1){
             team1AddedBias+=addR;
@@ -118,9 +124,11 @@ private:
             //cout << b << " addR:" << addR << " " << bias.name<< endl;
 
 
-
-            r+addR;
         }
+
+        r+=addR;
+
+        r*=(rating/5.0); //THIS IS PROBABLY BAD!!!
 
         return r;
     }
@@ -260,7 +268,7 @@ private:
             resetDowns();
             put(kickingTeam.name + " kick off for " + to_string(kickDistance) + ", " + offense.name + " RETURNS for " +
                 to_string(returnDistance));
-            time -= returnDistance / 3;
+            time -= returnDistance / 12;
         }
     }
 
@@ -556,10 +564,13 @@ int main() {
     //bills designation is default team 1
 
     team eagles;
-    eagles.oRating = 4;
-    eagles.dRating = 3;
-    eagles.name = "Chargers";
+    eagles.oRating = 3.75;
+    eagles.dRating = 4.92;
+    eagles.name = "Jaguars";
     eagles.designation = 2;
+
+    double tmult = 0.5;
+    int gamesToSimulate = 1;
 
     int team1Points = 0;
     int team2Points = 0;
@@ -575,7 +586,7 @@ int main() {
     time_t startSeconds;
     startSeconds = time(NULL);
 
-    int gamesToSimulate = 100;
+
 
     for (int ga = 1; ga <= gamesToSimulate; ga++) {
         cout << "--> Game " << ga << endl;
@@ -587,18 +598,22 @@ int main() {
         fb game; //GAME SETTINGS AND CONSTRUCTION:
         game.teams[0] = bills;
         game.teams[1] = eagles;
-        game.waitMultiplier = 1; //When output is false and wait is 0, problems occur
+        game.waitMultiplier = tmult; //When output is false and wait is 0, problems occur
         game.output = true;
 
         for (int i = 1; i <= 2; i++) {
             game.time = 175; //time per half
             game.half = i;
-            game.doHalf();
+            game.doHalf(false);
             game.put("End of half " + to_string(i) + ".");
 
         }
         if (game.score[0] == game.score[1]) {
-            game.put("Tie, end of regulation.");
+            game.put("Tie, end of regulation. Overtime. ");
+            game.time = 100;
+            game.doHalf(true);
+            game.put("End of overtime.");
+
         }
 
         team1Points+= game.score[0];
