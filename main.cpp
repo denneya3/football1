@@ -108,12 +108,13 @@ private:
 
         int maxBias = (int) ((max-r)*(rating/5.0));
         int addR = randomInt(0,maxBias);
+        addR = maxBias;
 
         if (bias.designation == 1){
             team1AddedBias+=addR;
         } else {team2AddedBias+=addR;}
 
-        if (false){ /////////////old CODE!
+        if (false){ //old CODE!
             int addR = max+123;
             double b;
             while (addR+r >= max){
@@ -128,7 +129,7 @@ private:
 
         r+=addR;
 
-        r*=(rating/5.0); //THIS IS PROBABLY BAD!!!
+        //r*=(rating/5.0); //THIS IS PROBABLY BAD!!!
 
         return r;
     }
@@ -344,7 +345,7 @@ private:
             touchdown(offense);
         }
 
-        //resetDowns(); //Redundant??
+        resetDowns(); //Redundant??
         return;
     }
 
@@ -475,7 +476,7 @@ private:
             }
 
         } else if (down != 4 || (down==4 && targetPosition-fieldPosition<= 2 && fieldPosition>52)) {
-            int playTypeChance = randomInt(1,10, offense);
+            int playTypeChance = randomInt(1,10);
 
             if (getTeamScore(offense) > getTeamScore(defense) && time/down <= 3 && fieldPosition >= 10 ){ //victory foemation
                 adjustFieldPosition(-2);
@@ -484,7 +485,7 @@ private:
 
             }else if (playTypeChance<=4 || fieldPosition>=98) { //running play
                 int fumbleChance = randomInt(1, 100, offense); //<=2 for fumble
-                int rand = randomInt(-3, 10, defense); //field gain
+                int rand = randomInt(-2, 11, defense); //field gain
                 int divider = 1;
                 if (fumbleChance <= 2) {
                     int recoveryChance = randomInt(0, 2);
@@ -502,15 +503,30 @@ private:
                     adjustFieldPosition(rand);
                 }
 
+
                 time -= rand / 3+1;
-
-
 
             } else { //passing play
 
-                int rand = randomInt(-10, 25, offense); //pass length
+                int rand;
+                //long / short pass
+                int playChoice = randomInt(1,3);
+
                 int completeStat = randomInt(0,10, offense);
                 int interceptionProb = randomInt(1,100, offense); // <=2 for interception
+
+                int toGo = targetPosition-fieldPosition;
+                int compNumber = 4;
+                if (fieldPosition < 90 && toGo>15 || playChoice == 1 || (time < 20 && getTeamScore(offense)<getTeamScore(defense) )) { // deep pass
+                    interceptionProb-=(defense.dRating+1);
+                    rand = randomInt(-15, 40, offense)-5; //pass length
+                } else if (playChoice == 2) { // short pass
+                    rand = randomInt(-10, 12, offense);
+                } else if (true || playChoice == 3){ // pa pass
+                    rand = randomInt(-12, 16, offense);
+                }
+
+
 
 
 
@@ -536,7 +552,7 @@ private:
                     return;
                 }
 
-                if (completeStat>6){ //incomplete
+                if (completeStat<=compNumber){//incomplete
                     //nothing happened, incomplete pass
                     down++;
                 } else { //complete
@@ -571,9 +587,8 @@ int main() {
     //why does a lower rating result in better stats sometimes?
 
 
-    string t;
+    /*string t;
     ifstream Settings("settings");
-
 
     int lines = 0;
     while (getline (Settings, t)) {
@@ -596,18 +611,18 @@ int main() {
 
     cout<<lns[2];
 
-    Settings.close();
+    Settings.close();*/
 
 
     team bills;
-    bills.oRating = 5;
-    bills.dRating = 3.7;
+    bills.oRating = 2.5;
+    bills.dRating = 5;
     bills.name = "Chiefs";
     //bills designation is default team 1
 
     team eagles;
-    eagles.oRating = 3.75;
-    eagles.dRating = 2.6;
+    eagles.oRating = 2.5;
+    eagles.dRating = 5;
     eagles.name = "Jaguars";
     eagles.designation = 2;
 
