@@ -1,0 +1,10 @@
+team1ORating =5
+team1DRating =3.7
+team1Name =Chiefs
+team2ORating =3.7
+team2DRating =2.6
+team2Name =Jaguars
+timeMultiplier =0.5
+gamesToSimulate =2;
+timePerHalf = 175
+output = true

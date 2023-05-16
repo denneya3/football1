@@ -554,8 +554,50 @@ private:
 
 };
 
+#include <fstream>
+#include <bits/stdc++.h>
+
+void adv_tokenizer(string s, char del)
+{
+    stringstream ss(s);
+    string word;
+    while (!ss.eof()) {
+        getline(ss, word, del);
+        cout << word << endl;
+    }
+}
+
 int main() {
     //why does a lower rating result in better stats sometimes?
+
+
+    string t;
+    ifstream Settings("settings");
+
+
+    int lines = 0;
+    while (getline (Settings, t)) {
+        cout << "l";
+        lines++;
+    }
+
+    string lns[lines];
+    int i = 0;
+
+    cout<<"BEFORE";
+    while (getline (Settings,t)){
+        cout << t;
+        cout <<"HI"<<endl;
+        adv_tokenizer(t, '=');
+        lns[i] =  t;
+        i++;
+    }
+    cout << "AFTER";
+
+    cout<<lns[2];
+
+    Settings.close();
+
 
     team bills;
     bills.oRating = 5;
@@ -565,7 +607,7 @@ int main() {
 
     team eagles;
     eagles.oRating = 3.75;
-    eagles.dRating = 4.92;
+    eagles.dRating = 2.6;
     eagles.name = "Jaguars";
     eagles.designation = 2;
 
