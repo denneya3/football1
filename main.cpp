@@ -628,15 +628,15 @@ int main() {
 
 
     team bills;
-    bills.oRating = 5;
-    bills.dRating = 3.8;
-    bills.name = "Chiefs";
+    bills.oRating = 0.5;
+    bills.dRating = 1;
+    bills.name = "Broncos";
     //bills designation is default team 1
 
     team eagles;
-    eagles.oRating = 4;
-    eagles.dRating = 3;
-    eagles.name = "Chargers";
+    eagles.oRating = 0.5;
+    eagles.dRating = 5;
+    eagles.name = "Colts";
     eagles.designation = 2;
 
     double tmult = 0;
