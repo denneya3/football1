@@ -108,7 +108,7 @@ private:
 
         int maxBias = (int) ((max-r)*(rating/5.0));
         int addR = randomInt(0,maxBias);
-        addR = maxBias;
+        addR = maxBias*0.5;
 
         if (bias.designation == 1){
             team1AddedBias+=addR;
@@ -164,10 +164,20 @@ private:
     }
 
     void fieldGoal(){
-        adjustScore(offense, 3);
-        put("FIELD GOAL "+offense.name);
-        time-=3;
-        kickoff();
+        int fieldGoalProb = randomInt(0,100,offense);
+        int a = getOppositeFieldPosition()/70.0 * 60;
+
+        if (fieldGoalProb>a) {
+            adjustScore(offense, 3);
+            put("FIELD GOAL MADE " + offense.name);
+            time-=3;
+            kickoff();
+        } else {
+            put("FIELD GOAL missed, TURNOVER "+offense.name);
+            time-=3;
+            fieldPosition = getOppositeFieldPosition();
+            swapPossession();
+        }
     }
 
     int getTeamScore(team t){
@@ -269,7 +279,7 @@ private:
             resetDowns();
             put(kickingTeam.name + " kick off for " + to_string(kickDistance) + ", " + offense.name + " RETURNS for " +
                 to_string(returnDistance));
-            time -= returnDistance / 12;
+            time -= randomInt(1,4);
         }
     }
 
@@ -372,11 +382,12 @@ private:
         }
     }
 
-    int offensivePenalties[1] = {10};
-    int defensivePenalties[1] = {5};
-
-    bool downs[1] = {false};
-    string messages[1] = {"Holding"};
+    //PENALTIES SETTINGS:
+    int offensivePenalties[3] = {10, 5, 15};
+    int defensivePenalties[3] = {5, 5, 15};
+    bool downs[3] = {false, false, true};
+    string oMessages[3] = {"Holding", "False Start", "Personal Foul"};
+    string dMessages[3] = {"Holding", "Offsides", "Personal Foul"};
 
     void penalize(bool side, int penalty){
         // side = true, offense
@@ -419,11 +430,11 @@ private:
 
         }
 
-        string po = "Offense";
+        string po = "Offense "+oMessages[penalty];
         if (side == false){
-            po = "Defense";
+            po = "Defense "+dMessages[penalty];
         }
-        put("FLAG "+po+" "+messages[penalty]+", "+to_string(amount)+" yds.");
+        put("FLAG "+po+", "+to_string(amount)+" yds.");
 
     }
 
@@ -432,15 +443,17 @@ private:
         // team homeTeam = teams[0]; //dont worry about this right now
         int flagProbability = randomInt(1,100);
         if (flagProbability<=4){
+            int pickFlag = randomInt(0,sizeof(offensivePenalties)/sizeof(int)-1); //assuming both have same len
+
             team offendingTeam = defense;
             if (flagProbability <= 2){
                 offendingTeam = offense;
-                penalize(true, 0);
+                penalize(true, pickFlag);
 
                 return;
             }
 
-            penalize(false, 0);
+            penalize(false, pickFlag);
 
             return;
         }
@@ -615,19 +628,19 @@ int main() {
 
 
     team bills;
-    bills.oRating = 2.5;
-    bills.dRating = 5;
+    bills.oRating = 5;
+    bills.dRating = 3.8;
     bills.name = "Chiefs";
     //bills designation is default team 1
 
     team eagles;
-    eagles.oRating = 2.5;
-    eagles.dRating = 5;
-    eagles.name = "Jaguars";
+    eagles.oRating = 4;
+    eagles.dRating = 3;
+    eagles.name = "Chargers";
     eagles.designation = 2;
 
-    double tmult = 0.5;
-    int gamesToSimulate = 1;
+    double tmult = 0;
+    int gamesToSimulate = 100;
 
     int team1Points = 0;
     int team2Points = 0;
@@ -692,7 +705,7 @@ int main() {
         }
 
     cout << game.teams[0].name + ": " + to_string(game.score[0]) + ",  " + game.teams[1].name + ": " +
-            to_string(game.score[1]) <<" "<< team1Wins<<"-"<<team2Wins << endl;
+            to_string(game.score[1]) <<" | "<< team1Wins<<"-"<<team2Wins << endl;
     }
 
     time_t endSeconds;
