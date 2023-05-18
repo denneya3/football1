@@ -48,18 +48,13 @@ public:
 
     bool isOvertime = false;
 
-    int * doHalf(bool overtimeRules){
+    int * doHalf(bool overtimeRules, team o, team d){
         isOvertime = overtimeRules;
 
-        offense = teams[0];
-        defense = teams[1];
-        int cFlip = randomInt(0,1);
-        if (cFlip == 1){
-           team tempOf = offense;
-           offense = defense;
-           defense = tempOf;
-        }
-        put("Coin flip result is that "+ defense.name+" returns the kickoff.");
+        offense = o;
+        defense = d;
+
+
         kickoff();
         while (time > 0){
             usleep(1000000*waitMultiplier); //1 second
@@ -84,6 +79,11 @@ public:
             //cout << targetPosition << " " << fieldPosition << endl;
         }
     }
+
+    int randomInt(int min, int max){
+        int r  = min + (rand() % static_cast<int>(max - min + 1));
+        return r;
+    }
 private:
 
 
@@ -92,46 +92,25 @@ private:
     int targetPosition = fieldPosition+10;
 
 
-    int randomInt(int min, int max){
-        int r  = min + (rand() % static_cast<int>(max - min + 1));
-        return r;
-    }
+
     int randomInt(int min, int max, team bias){
-        double rating = bias.oRating;
+        team otherTeam = getOtherTeam(bias);
+        double rating = bias.oRating*((8.55-otherTeam.dRating)/5.0);
         if (defense.equals(bias)){
             rating = bias.dRating;
         }
-
-
 
         int r  = min + (rand() % static_cast<int>(max - min + 1));
 
         int maxBias = (int) ((max-r)*(rating/5.0));
         int addR = randomInt(0,maxBias);
-        addR = maxBias*0.5;
+        addR = maxBias*0.5; //*0.5
 
         if (bias.designation == 1){
             team1AddedBias+=addR;
         } else {team2AddedBias+=addR;}
 
-        if (false){ //old CODE!
-            int addR = max+123;
-            double b;
-            while (addR+r >= max){
-                b = bias.oRating/5.0;
-                addR = randomInt(0,max*b);
-
-            }
-            //cout << b << " addR:" << addR << " " << bias.name<< endl;
-
-
-        }
-
-        r+=addR;
-
-        //r*=(rating/5.0); //THIS IS PROBABLY BAD!!!
-
-        return r;
+        return r+addR;
     }
 
     int getOppositeFieldPosition(){ //for instance if offense fumbles and recovered by defense
@@ -197,14 +176,15 @@ private:
     void touchdown(team scorer){
         adjustScore(scorer, 6);
 
+        fieldPosition=98; //for 2 pt and fg
         put("TOUCHDOWN "+scorer.name);
 
-         int ra = randomInt(0,100, scorer);//for pats and 2 point probability
+
+        int ra = randomInt(0,100, scorer);//for pats and 2 point probability
 
         int teamsScoreDifference = getTeamScore(getOtherTeam(scorer))-getTeamScore(scorer);
         int leadScoreDifference = getTeamScore(scorer)- getTeamScore(getOtherTeam(scorer));
-        if (teamsScoreDifference == 2 || teamsScoreDifference == 9 || leadScoreDifference == 1 ){ //if score difference is 2 or 8
-            //also if score difference is 1
+        if ((half == 2 && teamsScoreDifference == 5) || teamsScoreDifference == 2 || teamsScoreDifference == 9 || (half == 2 && teamsScoreDifference == 12) || leadScoreDifference == 1 ){ //if score difference is 2 or 8 or within more than field goal after pat or 1 lead to make it fieldgoal
 
             if (ra > 50){ //successful
                 adjustScore(scorer, 2);
@@ -242,6 +222,7 @@ private:
     }
 
     void safety(){
+        time-=1;
         adjustScore(defense, 2);
         put("SAFETY "+defense.name);
         kickoff();
@@ -405,12 +386,11 @@ private:
                 amount = fieldPosition/2;
             }
 
-            if (downs[penalty]==true && down != 4){
-                down++;
+
+            adjustFieldPosition(-1*amount);
+            if (downs[penalty]==false && down != 1){ //if loss of downs is false bc adjustFIeldPos adjusts downs
+                down--;
             }
-
-
-            fieldPosition-=amount;
 
         } else if (side == false){ //DEFENSIVE PENALTY
             amount = defensivePenalties[penalty];
@@ -423,16 +403,20 @@ private:
                 amount = (100-fieldPosition)/2;
             }
 
-            fieldPosition+=amount;
+            adjustFieldPosition(amount);
+            if (downs[penalty] == false && down!=1){ //if down is not lost for penalty
+                down--;
+            }
+
             if (fieldPosition>= targetPosition){
                 down = 1;
             }
 
         }
 
-        string po = "Offense "+oMessages[penalty];
+        string po = " "+offense.name+", Offense "+oMessages[penalty];
         if (side == false){
-            po = "Defense "+dMessages[penalty];
+            po = " "+defense.name+", Defense "+dMessages[penalty];
         }
         put("FLAG "+po+", "+to_string(amount)+" yds.");
 
@@ -462,10 +446,22 @@ private:
            resetDowns();
        }
 
-        if ((fieldPosition > 100-38) && (time<=4 || down == 4)) {
-            if ( !(half==2 && time <= 18 && getTeamScore(defense)- getTeamScore(offense)>3)  ) { //if need more than field goal to
-                fieldGoal();
+        if (getTeamScore(offense) >= getTeamScore(defense) && time/down <= 3 && fieldPosition >= 10 ){ //victory foemation
+                adjustFieldPosition(-2);
+                time -= 2;
+                put(offense.name+" QB Kneel");
                 return;
+                }
+
+            int toLead =  getTeamScore(defense)- getTeamScore(offense)>3;
+        if ((fieldPosition > 100-38) && (time<=4 || down == 4) && (fieldPosition < 97) ) {  //fg range
+            //also: if offense good and in closeish redzone
+            if ( !( (fieldPosition >= 97||(offense.oRating>=4 && fieldPosition >= 90  )) && (time>20 && (toLead<=3||toLead==0) ))) { //if team is at not 2 yard line and time is big and easy to get lead
+                if (!(half == 2 && time <= 18 && toLead)) { //if need more than field goal to get lead/tie
+
+                    fieldGoal();
+                    return;
+                }
             }
         }
         if (half == 2 && time<=4 && getTeamScore(offense) < getTeamScore(defense)){ //hail mary
@@ -488,15 +484,12 @@ private:
                 adjustFieldPosition(0);
             }
 
-        } else if (down != 4 || (down==4 && targetPosition-fieldPosition<= 2 && fieldPosition>52)) {
+        } else if (down != 4 || (down==4 && targetPosition-fieldPosition<= 2 && fieldPosition>52) || (half == 2 && time<21 && getTeamScore(offense) < getTeamScore(defense)) || (half == 2 && time<100 &&
+                getTeamScore(defense)- getTeamScore(offense) >=21 && targetPosition-fieldPosition<=10) ) { //if losing and on crunch time and if being blown out
             int playTypeChance = randomInt(1,10);
 
-            if (getTeamScore(offense) > getTeamScore(defense) && time/down <= 3 && fieldPosition >= 10 ){ //victory foemation
-                adjustFieldPosition(-2);
-                time -= 2;
-                put(offense.name+" sit on it");
 
-            }else if (playTypeChance<=4 || fieldPosition>=98) { //running play
+             if ( (playTypeChance<=4 || fieldPosition>=98) && (time>19 || fieldPosition>=95) ) { //running play
                 int fumbleChance = randomInt(1, 100, offense); //<=2 for fumble
                 int rand = randomInt(-2, 11, defense); //field gain
                 int divider = 1;
@@ -530,7 +523,17 @@ private:
 
                 int toGo = targetPosition-fieldPosition;
                 int compNumber = 4;
-                if (fieldPosition < 90 && toGo>15 || playChoice == 1 || (time < 20 && getTeamScore(offense)<getTeamScore(defense) )) { // deep pass
+
+                int sackProb = randomInt(1,100,defense);
+                if (sackProb >= 100-7){
+                    int sackDist = randomInt(1,20);
+                    adjustFieldPosition(-1*sackDist);
+                    put("SACKED for "+to_string(sackDist)+" yards");
+                    //down++;
+                    return;
+                }
+
+                if ( fieldPosition < 90 && ((down>1 && toGo>=15) || playChoice == 1 || (time < 20 && getTeamScore(offense)<getTeamScore(defense)) ) )  { // deep pass
                     interceptionProb-=(defense.dRating+1);
                     rand = randomInt(-15, 40, offense)-5; //pass length
                 } else if (playChoice == 2) { // short pass
@@ -626,21 +629,22 @@ int main() {
 
     Settings.close();*/
 
+    //problem: drating doesnt affect much
 
-    team bills;
-    bills.oRating = 0.5;
-    bills.dRating = 1;
-    bills.name = "Broncos";
-    //bills designation is default team 1
+    team team1; //home team
+    team1.oRating = 4.4;
+    team1.dRating = 4;
+    team1.name = "Bills";
+    //team1 designation is default team 1
 
-    team eagles;
-    eagles.oRating = 0.5;
-    eagles.dRating = 5;
-    eagles.name = "Colts";
-    eagles.designation = 2;
+    team team2; //away team
+    team2.oRating = 4.5;
+    team2.dRating = 4.2;
+    team2.name = "Bengals";
+    team2.designation = 2;
 
-    double tmult = 0;
-    int gamesToSimulate = 100;
+    double tmult = 2;
+    int gamesToSimulate = 1;
 
     int team1Points = 0;
     int team2Points = 0;
@@ -666,22 +670,55 @@ int main() {
         srand(seconds);
 
         fb game; //GAME SETTINGS AND CONSTRUCTION:
-        game.teams[0] = bills;
-        game.teams[1] = eagles;
+        game.teams[0] = team1;
+        game.teams[1] = team2;
         game.waitMultiplier = tmult; //When output is false and wait is 0, problems occur
         game.output = true;
 
+        team o = team2;
+        team d = team1;
+        int cFlip = game.randomInt(0,1);
+        if (cFlip == 1){
+            team tempOf = o;
+            game.offense = d;
+            game.defense = tempOf;
+        }
+        game.put("Coin flip result is that "+ d.name+" returns the kickoff.");
+
         for (int i = 1; i <= 2; i++) {
+
+
             game.time = 175; //time per half
             game.half = i;
-            game.doHalf(false);
-            game.put("End of half " + to_string(i) + ".");
 
+
+            if (i == 1) {
+                game.doHalf(false, o, d);
+            } else { //2n dhalf
+                game.put(d.name+" are returning the kickoff.");
+                usleep(1000000*game.waitMultiplier);
+                game.doHalf(false, d,o);
+            }
+            game.put("End of half " + to_string(i) + ".");
+            usleep(1000000*game.waitMultiplier);
         }
         if (game.score[0] == game.score[1]) {
+            team o = team2;
+            team d = team1;
+            int cFlip = game.randomInt(0,1);
+            if (cFlip == 1){
+                team tempOf = o;
+                game.offense = d;
+                game.defense = tempOf;
+            }
+
+
             game.put("Tie, end of regulation. Overtime. ");
+            usleep(1000000*game.waitMultiplier);
+            game.put("Coin flip result is that "+ d.name+" returns the kickoff.");
+
             game.time = 100;
-            game.doHalf(true);
+            game.doHalf(true, o,d);
             game.put("End of overtime.");
 
         }
@@ -713,8 +750,8 @@ int main() {
 
     cout << endl << "~~~~~Overall Stats~~~~~" << endl;
     cout << "Took " << endSeconds-startSeconds << " seconds to simulate "<< gamesToSimulate << " games." << endl;
-    cout << bills.name << " pts: "<< team1Points << ", wins: "<< team1Wins << ", high pts:" << team1Highest << ", total bias: "<< team1AddedBias << endl;
-    cout << eagles.name << " pts: "<< team2Points << ", wins: "<< team2Wins << ", high pts:" << team2Highest << ", total bias: " << team2AddedBias << endl;
+    cout << team1.name << " pts: "<< team1Points << ", wins: "<< team1Wins << ", high pts: " << team1Highest << ", total bias: "<< team1AddedBias << endl;
+    cout << team2.name << " pts: "<< team2Points << ", wins: "<< team2Wins << ", high pts: " << team2Highest << ", total bias: " << team2AddedBias << endl;
     cout << "ties: " << ties << endl;
     cout << "~~~~~~~~~~~~~~~~~~~~~~";
 
